@@ -43,10 +43,10 @@ logger = logging.getLogger(__name__)
 
 
 class Poll(commands.Cog):
-    def __init__(self, bot, config, color=Colour.from_rgb(15, 185, 177)):
+    def __init__(self, bot):
         self.bot = bot
-        self.config = config
-        self.color = color
+        self.config = bot.config_file
+        self.color = bot.color
         self.polls = dict()
 
     @commands.Cog.listener()
@@ -172,9 +172,3 @@ class Poll(commands.Cog):
             return 0
 
         await self.send_message(ctx, args)
-
-    @commands.command()
-    async def purge(self, ctx, number: int):
-        channel = ctx.channel
-        await ctx.message.delete()
-        await channel.purge(limit=number)

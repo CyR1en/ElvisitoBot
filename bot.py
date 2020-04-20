@@ -4,6 +4,7 @@ import discord
 from discord import Colour
 from discord.ext import commands
 
+from cog.admin import Admin
 from cog.poll import Poll
 from configuration import ConfigNode
 
@@ -17,7 +18,8 @@ class Bot(commands.AutoShardedBot):
         self.config_file = config_file
         self.token = None
         self.remove_command('help')
-        self.add_cog(Poll(self, self.config_file, self.color))
+        self.add_cog(Poll(self))
+        self.add_cog(Admin(self))
 
     async def on_ready(self):
         game = "{}poll".format(self.config_file.get(ConfigNode.PREFIX))
