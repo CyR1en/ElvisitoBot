@@ -46,7 +46,7 @@ def check_token(configuration):
 
 
 if __name__ == '__main__':
-    config = ConfigFile("config")
-    check_token(config)
     with setup_logging():
+        config = ConfigFile("config")
+        check_token(config)
         Bot(config, config.get(ConfigNode.PREFIX)).run(config.get(ConfigNode.TOKEN))
