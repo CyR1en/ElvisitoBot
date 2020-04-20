@@ -1,7 +1,11 @@
 import contextlib
 import logging
+import sys
 
 from bot import Bot
+from configuration import ConfigFile, ConfigNode
+
+logger = logging.getLogger(__name__)
 
 
 @contextlib.contextmanager
@@ -28,6 +32,21 @@ def setup_logging():
             log.removeHandler(handler)
 
 
+def check_token(configuration):
+    token = configuration.get(ConfigNode.TOKEN)
+    if token == ConfigNode.TOKEN.get_value():
+        logger.warning("The config file is either newly generated or the token was left to its default value. \n"
+                       "Please enter your bot's token:")
+        try:
+            token = input()
+            configuration.set(ConfigNode.TOKEN, token)
+        except KeyboardInterrupt:
+            logger.error("Interrupted token input")
+            sys.exit()
+
+
 if __name__ == '__main__':
+    config = ConfigFile("config")
+    check_token(config)
     with setup_logging():
-        Bot()
+        Bot(config, config.get(ConfigNode.PREFIX)).run(config.get(ConfigNode.TOKEN))
