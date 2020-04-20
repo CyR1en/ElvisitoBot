@@ -48,6 +48,7 @@ class Poll(commands.Cog):
         self.config = bot.config_file
         self.color = bot.color
         self.polls = dict()
+        self.is_mv = False
 
     @commands.Cog.listener()
     async def on_raw_message_delete(self, payload):
@@ -90,12 +91,16 @@ class Poll(commands.Cog):
     def build_help_embed(self):
         embed = discord.Embed(title="How to use this bot", color=self.color)
         sample = """
-               {}poll "Poll title" "option 1" "option 2" ...
+               {}poll **make** "Poll title" "option 1" "option 2" ...
+               """.format(self.config.get(ConfigNode.PREFIX))
+        toggle_mv = """
+               {}poll **toggle-mv**
                """.format(self.config.get(ConfigNode.PREFIX))
         edit_sample = """
                To edit a poll, just right click the original command message and edit it there.
                """
         embed.add_field(name="To make a poll", value=sample, inline=False)
+        embed.add_field(name="To toggle multiple votes", value=toggle_mv, inline=False)
         embed.add_field(name="To edit a poll", value=edit_sample, inline=False)
         embed.set_footer(text="Be sure to put quotation marks per option.")
         return embed
@@ -147,7 +152,7 @@ class Poll(commands.Cog):
         poll_dict = self.polls.get(poll_key)
         user_id = payload.user_id
         # If user voted, delete previous vote.
-        if user_id in poll_dict.keys():
+        if user_id in poll_dict.keys() and not self.is_mv:
             msg = await channel.fetch_message(payload.message_id)
             await msg.remove_reaction(poll_dict.get(user_id), payload.member)
             poll_dict[user_id] = payload.emoji
@@ -161,14 +166,27 @@ class Poll(commands.Cog):
     async def help(self, ctx):
         await ctx.send(embed=self.build_help_embed())
 
-    @commands.command()
-    async def poll(self, ctx, *args):
-        """Poll commands"""
-        if len(args) is 0:
+    @commands.group()
+    async def poll(self, ctx):
+        if ctx.invoked_subcommand is None:
             await ctx.send(embed=self.build_help_embed())
-            return 0
-        if len(args) is 1:
-            await ctx.send(embed=self.build_help_embed())
-            return 0
 
-        await self.send_message(ctx, args)
+    @poll.command()
+    async def make(self, ctx, *args):
+        if ctx.invoked_subcommand is None:
+            """Poll commands"""
+            if len(args) is 0:
+                await ctx.send(embed=self.build_help_embed())
+                return 0
+            if len(args) is 1:
+                await ctx.send(embed=self.build_help_embed())
+                return 0
+            await self.send_message(ctx, args)
+
+    @poll.command(name='toggle-mv')
+    async def toggle_mv(self, ctx):
+        self.is_mv = not self.is_mv
+        desc = "Users can now vote multiple times!" if self.is_mv \
+            else "Users can no longer vote multiple times"
+        embed = discord.Embed(description=desc, color=self.color)
+        await ctx.send(embed=embed)
