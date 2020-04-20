@@ -12,10 +12,10 @@ logger = logging.getLogger(__name__)
 def setup_logging():
     try:
         # __enter__
-        logging.getLogger('discord').setLevel(logging.DEBUG)
+        logging.getLogger('discord').setLevel(logging.INFO)
 
         log = logging.getLogger()
-        log.setLevel(logging.DEBUG)
+        log.setLevel(logging.INFO)
         handler = logging.FileHandler(filename='discord.log', encoding='utf-8', mode='w')
         fmt = logging.Formatter('[%(levelname)s][%(asctime)s][%(name)s]: %(message)s')
         s_handler = logging.StreamHandler()
