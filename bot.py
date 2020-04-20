@@ -24,5 +24,5 @@ class Bot(commands.Bot):
         await self.change_presence(activity=discord.Activity(type=discord.ActivityType.listening, name=game))
         logger.info('Successfully logged in as {}'.format(self.user))
 
-    def start(self):
+    def start_bot(self):
         self.run(self.config_file.get(ConfigNode.TOKEN))
