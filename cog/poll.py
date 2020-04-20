@@ -71,10 +71,7 @@ class Poll(commands.Cog):
     async def get_poll_message_from_command_message(self, message):
         msg_id = message.id
         channel = message.channel
-        print(self.polls.values())
         for value in self.polls.values():
-            print(msg_id)
-            print(value.get('command_id'))
             if value.get('command_id') == msg_id:
                 return await channel.fetch_message(self.get_key(value))
         return None
