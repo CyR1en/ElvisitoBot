@@ -10,7 +10,7 @@ from configuration import ConfigNode
 logger = logging.getLogger(__name__)
 
 
-class Bot(commands.Bot):
+class Bot(commands.AutoShardedBot):
     def __init__(self, config_file, color=Colour.from_rgb(15, 185, 177), **options):
         super().__init__(config_file.get(ConfigNode.PREFIX), **options)
         self.color = color
