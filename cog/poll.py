@@ -50,12 +50,6 @@ class Poll(commands.Cog):
         self.polls = dict()
 
     @commands.Cog.listener()
-    async def on_ready(self):
-        game = "{}poll".format(self.config.get_string_node(ConfigNode.PREFIX))
-        await self.bot.change_presence(activity=discord.Activity(type=discord.ActivityType.listening, name=game))
-        logger.info('Successfully logged in as {}'.format(self.bot.user))
-
-    @commands.Cog.listener()
     async def on_raw_message_delete(self, payload):
         key = payload.message_id
         if key in self.polls.keys():
@@ -100,7 +94,7 @@ class Poll(commands.Cog):
         embed = discord.Embed(title="How to use this bot", color=self.color)
         sample = """
                {}poll "Poll title" "option 1" "option 2" ...
-               """.format(self.config.get_string_node(ConfigNode.PREFIX))
+               """.format(self.config.get(ConfigNode.PREFIX))
         edit_sample = """
                To edit a poll, just right click the original command message and edit it there.
                """
