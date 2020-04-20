@@ -109,7 +109,7 @@ class ConfigFile(File, ABC):
                 self.nodes[key] = self.__get_val_from_line(line)
         f.close()
 
-    def get_string_node(self, node):
+    def get(self, node):
         """
         Get a value of a node
 
