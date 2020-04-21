@@ -48,7 +48,6 @@ class Poll(commands.Cog):
         self.config = bot.config_file
         self.color = bot.color
         self.polls = dict()
-        self.is_mv = False
 
     @commands.Cog.listener()
     async def on_raw_message_delete(self, payload):
@@ -73,19 +72,26 @@ class Poll(commands.Cog):
         msg_id = message.id
         channel = message.channel
         for value in self.polls.values():
-            if value.get('command_id') == msg_id:
+            meta = value.get('meta')
+            if meta.get('command_id') == msg_id:
                 return await channel.fetch_message(self.get_key(value))
         return None
 
     async def send_message(self, ctx, args):
         msg = await ctx.send(embed=self.build_poll_embed(args))
-        self.set_poll(msg.id, {'command_id': ctx.message.id}, log=True)
+        meta = {
+            'command_id': ctx.message.id,
+            'is_mv': False,
+            'options': args[1:len(args)]
+        }
+        self.set_poll(msg.id, {'meta': meta, 'votes': dict()}, log=True)
         await self.react(msg, args)
 
     def build_poll_embed(self, args):
         title = args[0]
         embed = discord.Embed(title=title, color=self.color)
         embed.add_field(name="Options", value=self.build_option(args[1:len(args)]), inline=False)
+        embed.set_footer(text='Right click > copy id, to get the id of this poll')
         return embed
 
     def build_help_embed(self):
@@ -94,7 +100,7 @@ class Poll(commands.Cog):
                {}poll **make** "Poll title" "option 1" "option 2" ...
                """.format(self.config.get(ConfigNode.PREFIX))
         toggle_mv = """
-               {}poll **toggle-mv**
+               {}poll **toggle-mv** <poll-id>
                """.format(self.config.get(ConfigNode.PREFIX))
         edit_sample = """
                To edit a poll, just right click the original command message and edit it there.
@@ -102,6 +108,7 @@ class Poll(commands.Cog):
         embed.add_field(name="To make a poll", value=sample, inline=False)
         embed.add_field(name="To toggle multiple votes", value=toggle_mv, inline=False)
         embed.add_field(name="To edit a poll", value=edit_sample, inline=False)
+
         embed.set_footer(text="Be sure to put quotation marks per option.")
         return embed
 
@@ -150,16 +157,17 @@ class Poll(commands.Cog):
             return 0
 
         poll_dict = self.polls.get(poll_key)
+        is_mv = poll_dict.get('meta').get('is_mv')
         user_id = payload.user_id
         # If user voted, delete previous vote.
-        if user_id in poll_dict.keys() and not self.is_mv:
+        if user_id in poll_dict.get('votes').keys() and not is_mv:
             msg = await channel.fetch_message(payload.message_id)
-            await msg.remove_reaction(poll_dict.get(user_id), payload.member)
-            poll_dict[user_id] = payload.emoji
+            await msg.remove_reaction(poll_dict.get('votes').get(user_id), payload.member)
+            poll_dict.get('votes')[user_id] = payload.emoji
             self.set_poll(poll_key, poll_dict, log=True)
         # Else just log it
         else:
-            poll_dict[user_id] = payload.emoji
+            poll_dict.get('votes')[user_id] = payload.emoji
             self.set_poll(poll_key, poll_dict, log=True)
 
     @commands.command()
@@ -184,9 +192,14 @@ class Poll(commands.Cog):
             await self.send_message(ctx, args)
 
     @poll.command(name='toggle-mv')
-    async def toggle_mv(self, ctx):
-        self.is_mv = not self.is_mv
-        desc = "Users can now vote multiple times!" if self.is_mv \
-            else "Users can no longer vote multiple times"
+    async def toggle_mv(self, ctx, message_id: int):
+        if message_id not in self.polls.keys():
+            return 0
+        is_mv = self.polls.get(message_id).get('meta').get('is_mv')
+        is_mv = not is_mv
+        self.polls.get(message_id).get('meta')['is_mv'] = is_mv
+        logger.info(self.polls)
+        desc = "Users can now vote multiple times for `{}`.".format(message_id) if is_mv \
+            else "Users can no longer vote multiple times for `{}`.".format(message_id)
         embed = discord.Embed(description=desc, color=self.color)
         await ctx.send(embed=embed)
