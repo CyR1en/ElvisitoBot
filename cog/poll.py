@@ -1,4 +1,3 @@
-#!/usr/bin/env python
 # -*- coding: utf-8 -*-
 
 import asyncio
@@ -6,38 +5,40 @@ import logging
 import re
 
 import discord
-from discord import Colour, PartialEmoji
+from discord import PartialEmoji
 from discord.ext import commands
-from configuration import ConfigNode
 
-regional_indicator_emojis = {
-    'regional_indicator_a': PartialEmoji(animated=False, name='🇦', id=None),
-    'regional_indicator_b': PartialEmoji(animated=False, name='🇧', id=None),
-    'regional_indicator_c': PartialEmoji(animated=False, name='🇨', id=None),
-    'regional_indicator_d': PartialEmoji(animated=False, name='🇩', id=None),
-    'regional_indicator_e': PartialEmoji(animated=False, name='🇪', id=None),
-    'regional_indicator_f': PartialEmoji(animated=False, name='🇫', id=None),
-    'regional_indicator_g': PartialEmoji(animated=False, name='🇬', id=None),
-    'regional_indicator_h': PartialEmoji(animated=False, name='🇭', id=None),
-    'regional_indicator_i': PartialEmoji(animated=False, name='🇮', id=None),
-    'regional_indicator_j': PartialEmoji(animated=False, name='🇯', id=None),
-    'regional_indicator_k': PartialEmoji(animated=False, name='🇰', id=None),
-    'regional_indicator_l': PartialEmoji(animated=False, name='🇱', id=None),
-    'regional_indicator_m': PartialEmoji(animated=False, name='🇲', id=None),
-    'regional_indicator_n': PartialEmoji(animated=False, name='🇳', id=None),
-    'regional_indicator_o': PartialEmoji(animated=False, name='🇴', id=None),
-    'regional_indicator_p': PartialEmoji(animated=False, name='🇵', id=None),
-    'regional_indicator_q': PartialEmoji(animated=False, name='🇶', id=None),
-    'regional_indicator_r': PartialEmoji(animated=False, name='🇷', id=None),
-    'regional_indicator_s': PartialEmoji(animated=False, name='🇸', id=None),
-    'regional_indicator_t': PartialEmoji(animated=False, name='🇹', id=None),
-    'regional_indicator_u': PartialEmoji(animated=False, name='🇺', id=None),
-    'regional_indicator_v': PartialEmoji(animated=False, name='🇻', id=None),
-    'regional_indicator_w': PartialEmoji(animated=False, name='🇼', id=None),
-    'regional_indicator_x': PartialEmoji(animated=False, name='🇽', id=None),
-    'regional_indicator_y': PartialEmoji(animated=False, name='🇾', id=None),
-    'regional_indicator_z': PartialEmoji(animated=False, name='🇿', id=None),
-}
+from configuration import ConfigNode
+from utility import DictAccess
+
+ri_emoji = [
+    PartialEmoji(animated=False, name='🇦', id=None),
+    PartialEmoji(animated=False, name='🇧', id=None),
+    PartialEmoji(animated=False, name='🇨', id=None),
+    PartialEmoji(animated=False, name='🇩', id=None),
+    PartialEmoji(animated=False, name='🇪', id=None),
+    PartialEmoji(animated=False, name='🇫', id=None),
+    PartialEmoji(animated=False, name='🇬', id=None),
+    PartialEmoji(animated=False, name='🇭', id=None),
+    PartialEmoji(animated=False, name='🇮', id=None),
+    PartialEmoji(animated=False, name='🇯', id=None),
+    PartialEmoji(animated=False, name='🇰', id=None),
+    PartialEmoji(animated=False, name='🇱', id=None),
+    PartialEmoji(animated=False, name='🇲', id=None),
+    PartialEmoji(animated=False, name='🇳', id=None),
+    PartialEmoji(animated=False, name='🇴', id=None),
+    PartialEmoji(animated=False, name='🇵', id=None),
+    PartialEmoji(animated=False, name='🇶', id=None),
+    PartialEmoji(animated=False, name='🇷', id=None),
+    PartialEmoji(animated=False, name='🇸', id=None),
+    PartialEmoji(animated=False, name='🇹', id=None),
+    PartialEmoji(animated=False, name='🇺', id=None),
+    PartialEmoji(animated=False, name='🇻', id=None),
+    PartialEmoji(animated=False, name='🇼', id=None),
+    PartialEmoji(animated=False, name='🇽', id=None),
+    PartialEmoji(animated=False, name='🇾', id=None),
+    PartialEmoji(animated=False, name='🇿', id=None),
+]
 
 logger = logging.getLogger(__name__)
 
@@ -58,40 +59,41 @@ class Poll(commands.Cog):
 
     @commands.Cog.listener()
     async def on_message_edit(self, before, after):
-        poll_msg = await self.get_poll_message_from_command_message(before)
+        poll_msg = await self.get_poll_from_id(before)
         # check if the message is a poll
         if poll_msg is None:
             return 0
 
+        model = self.polls.get(poll_msg.id)
         matches = re.findall('\"(.*?)\"', after.content)
+        model.set_meta('title', matches[0])
+        model.set_meta('options', matches[1:len(matches)])
         await poll_msg.clear_reactions()
-        await poll_msg.edit(embed=self.build_poll_embed(matches))
-        await self.react(poll_msg, matches)
+        await poll_msg.edit(embed=self._build_poll_embed(poll_id=poll_msg.id))
+        await self._react(poll_msg)
 
-    async def get_poll_message_from_command_message(self, message):
+    async def get_poll_from_id(self, message):
         msg_id = message.id
         channel = message.channel
         for value in self.polls.values():
-            meta = value.get('meta')
-            if meta.get('command_id') == msg_id:
-                return await channel.fetch_message(self.get_key(value))
+            if value.get_meta('command_id') == msg_id:
+                return await channel.fetch_message(self._get_key(value))
         return None
 
-    async def send_message(self, ctx, args):
-        msg = await ctx.send(embed=self.build_poll_embed(args))
-        meta = {
-            'command_id': ctx.message.id,
-            'is_mv': False,
-            'options': args[1:len(args)]
-        }
-        self.set_poll(msg.id, {'meta': meta, 'votes': dict()}, log=True)
-        await self.react(msg, args)
-
-    def build_poll_embed(self, args):
-        title = args[0]
+    def _build_poll_embed(self, poll_id):
+        args = self.polls.get(poll_id).get_meta('options')
+        title = self.polls.get(poll_id).get_meta('title')
         embed = discord.Embed(title=title, color=self.color)
-        embed.add_field(name="Options", value=self.build_option(args[1:len(args)]), inline=False)
-        embed.set_footer(text='Right click > copy id, to get the id of this poll')
+
+        options = []
+        i = 1
+        for option in self.polls.get(poll_id).get_meta('options'):
+            options.append(':regional_indicator_{}: \t{}\n'.format(chr(ord('`') + i), option))
+            i += 1
+        options = ''.join(options)
+
+        embed.add_field(name="Options", value=self._build_option(poll_id), inline=False)
+        embed.set_footer(text='Poll ID: {}'.format(poll_id))
         return embed
 
     def build_help_embed(self):
@@ -112,32 +114,6 @@ class Poll(commands.Cog):
         embed.set_footer(text="Be sure to put quotation marks per option.")
         return embed
 
-    def set_poll(self, key, value_dict, log=False):
-        self.polls[key] = value_dict
-        if log:
-            logger.info(self.polls)
-
-    def get_key(self, val):
-        for key, value in self.polls.items():
-            if val == value:
-                return key
-
-    @staticmethod
-    def build_option(args):
-        options = []
-        i = 1
-        for option in args:
-            options.append(':regional_indicator_{}: \t{}\n'.format(chr(ord('`') + i), option))
-            i += 1
-        return ''.join(options)
-
-    @staticmethod
-    async def react(message, args):
-        for i in range(len(args) - 1):
-            await message.add_reaction(
-                emoji=regional_indicator_emojis.get('regional_indicator_{}'.format(chr(ord('`') + i + 1))))
-            await asyncio.sleep(0.25)
-
     @commands.Cog.listener()
     async def on_raw_reaction_add(self, payload):
         # Ignore if self is adding reaction
@@ -150,25 +126,22 @@ class Poll(commands.Cog):
         if poll_key not in self.polls.keys():
             return 0
 
-        # Remove emoji that's not part of the vote
-        if payload.emoji not in regional_indicator_emojis.values():
+        # Remove emoji that's not an option
+        if payload.emoji not in ri_emoji[0:len(self.polls.get(poll_key).get_meta('options'))]:
             msg = await channel.fetch_message(payload.message_id)
             await msg.remove_reaction(payload.emoji, payload.member)
             return 0
 
-        poll_dict = self.polls.get(poll_key)
-        is_mv = poll_dict.get('meta').get('is_mv')
+        model = self.polls.get(poll_key)
         user_id = payload.user_id
         # If user voted, delete previous vote.
-        if user_id in poll_dict.get('votes').keys() and not is_mv:
+        if user_id in model.votes.keys() and not model.get_meta('is_mv'):
             msg = await channel.fetch_message(payload.message_id)
-            await msg.remove_reaction(poll_dict.get('votes').get(user_id), payload.member)
-            poll_dict.get('votes')[user_id] = payload.emoji
-            self.set_poll(poll_key, poll_dict, log=True)
+            await msg.remove_reaction(model.get_vote(user_id), payload.member)
+            model.set_vote(user_id, payload.emoji)
         # Else just log it
         else:
-            poll_dict.get('votes')[user_id] = payload.emoji
-            self.set_poll(poll_key, poll_dict, log=True)
+            model.set_vote(user_id, payload.emoji)
 
     @commands.command()
     async def help(self, ctx):
@@ -189,17 +162,74 @@ class Poll(commands.Cog):
             if len(args) is 1:
                 await ctx.send(embed=self.build_help_embed())
                 return 0
-            await self.send_message(ctx, args)
+            await self._send_message(ctx, args)
 
     @poll.command(name='toggle-mv')
     async def toggle_mv(self, ctx, message_id: int):
         if message_id not in self.polls.keys():
             return 0
-        is_mv = self.polls.get(message_id).get('meta').get('is_mv')
-        is_mv = not is_mv
-        self.polls.get(message_id).get('meta')['is_mv'] = is_mv
+        model = self.polls.get(message_id)
+        is_mv = model.get_meta('is_mv')
+        model.set_meta('is_mv', not is_mv)
         logger.info(self.polls)
-        desc = "Users can now vote multiple times for `{}`.".format(message_id) if is_mv \
-            else "Users can no longer vote multiple times for `{}`.".format(message_id)
+        desc = "Users can now vote multiple times for `{}`.".format(model.get_meta('title')) if not is_mv \
+            else "Users can no longer vote multiple times for `{}`.".format(model.get_meta('title'))
         embed = discord.Embed(description=desc, color=self.color)
         await ctx.send(embed=embed)
+
+    def _new_poll(self, key, poll_model, log=False):
+        self.polls[key] = poll_model
+        if log:
+            logger.info(self.polls)
+
+    async def _send_message(self, ctx, args):
+        msg = await ctx.send(embed=discord.Embed(title="Generating poll...."))
+        self._new_poll(msg.id, PollModel(ctx.message.id, args), log=True)
+        await msg.edit(embed=self._build_poll_embed(msg.id))
+        await self._react(msg)
+
+    def _get_key(self, val):
+        for key, value in self.polls.items():
+            if val == value:
+                return key
+
+    def _build_option(self, poll_id):
+        options = []
+        i = 1
+        for option in self.polls.get(poll_id).get_meta('options'):
+            options.append(':regional_indicator_{}: \t{}\n'.format(chr(ord('`') + i), option))
+            i += 1
+        return ''.join(options)
+
+    async def _react(self, message):
+        args = self.polls.get(message.id).get_meta('options')
+        message = await message.channel.fetch_message(id=message.id)
+        for i in range(len(args)):
+            await message.add_reaction(
+                emoji=ri_emoji[i])
+            await asyncio.sleep(0.25)
+
+
+class PollModel(DictAccess):
+    def __init__(self, command_id, args, is_mv=False):
+        self.meta = {'command_id': command_id, 'title': args[0], 'options': args[1:len(args)], 'is_mv': is_mv}
+        self.votes = dict()
+
+    @DictAccess.get
+    def get_meta(self, key):
+        return self.meta
+
+    @DictAccess.set
+    def set_meta(self, key, val):
+        return self.meta
+
+    @DictAccess.get
+    def get_vote(self, key):
+        return self.votes
+
+    @DictAccess.set
+    def set_vote(self, key, val):
+        return self.votes
+
+    def __repr__(self):
+        return '<{0.__class__.__name__} meta={0.meta} votes={0.votes}>'.format(self)
