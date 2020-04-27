@@ -8,8 +8,12 @@ import discord
 from discord import PartialEmoji
 from discord.ext import commands
 
+from cog.misc import Misc
 from configuration import ConfigNode
 from utility import DictAccess
+
+F20 = 0x171971A1080
+D_EPOCH = 0x14AA2CAB000
 
 ri_emoji = [
     PartialEmoji(animated=False, name='🇦', id=None),
@@ -96,24 +100,6 @@ class Poll(commands.Cog):
         embed.set_footer(text='Poll ID: {}'.format(poll_id))
         return embed
 
-    def build_help_embed(self):
-        embed = discord.Embed(title="How to use this bot", color=self.color)
-        sample = """
-               {}poll **make** "Poll title" "option 1" "option 2" ...
-               """.format(self.config.get(ConfigNode.PREFIX))
-        toggle_mv = """
-               {}poll **toggle-mv** <poll-id>
-               """.format(self.config.get(ConfigNode.PREFIX))
-        edit_sample = """
-               To edit a poll, just right click the original command message and edit it there.
-               """
-        embed.add_field(name="To make a poll", value=sample, inline=False)
-        embed.add_field(name="To toggle multiple votes", value=toggle_mv, inline=False)
-        embed.add_field(name="To edit a poll", value=edit_sample, inline=False)
-
-        embed.set_footer(text="Be sure to put quotation marks per option.")
-        return embed
-
     @commands.Cog.listener()
     async def on_raw_reaction_add(self, payload):
         # Ignore if self is adding reaction
@@ -143,24 +129,21 @@ class Poll(commands.Cog):
         else:
             model.set_vote(user_id, payload.emoji)
 
-    @commands.command()
-    async def help(self, ctx):
-        await ctx.send(embed=self.build_help_embed())
-
     @commands.group()
     async def poll(self, ctx):
         if ctx.invoked_subcommand is None:
-            await ctx.send(embed=self.build_help_embed())
+            await ctx.send(embed=Misc.build_help_embed(self))
 
     @poll.command()
     async def make(self, ctx, *args):
+        ctx.channel.guild.get_member('')
         if ctx.invoked_subcommand is None:
             """Poll commands"""
             if len(args) is 0:
-                await ctx.send(embed=self.build_help_embed())
+                await ctx.send(embed=Misc.build_help_embed(self))
                 return 0
             if len(args) is 1:
-                await ctx.send(embed=self.build_help_embed())
+                await ctx.send(embed=Misc.build_help_embed(self))
                 return 0
             await self._send_message(ctx, args)
 
@@ -208,6 +191,28 @@ class Poll(commands.Cog):
             await message.add_reaction(
                 emoji=ri_emoji[i])
             await asyncio.sleep(0.25)
+
+    @staticmethod
+    def shorten_snowflake(snowflake):
+        elapsed = (snowflake >> 0x16) + D_EPOCH
+        dT = elapsed - F20
+        return (dT << 5) | (snowflake & 0xFFF)
+
+    @staticmethod
+    def expand_shortflake(snowflake):
+        diff = F20 - D_EPOCH
+        print(diff)
+        full = ((snowflake >> 5) + diff) << 0x16
+        print(full)
+        return ((snowflake >> 5) + diff) << 0x16
+
+
+if __name__ == "__main__":
+    flake = 703149926741442692
+    short_flake = Poll.shorten_snowflake(flake)
+    print(short_flake)
+    print(flake)
+    print(Poll.expand_shortflake(short_flake))
 
 
 class PollModel(DictAccess):
