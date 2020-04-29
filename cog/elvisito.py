@@ -38,7 +38,7 @@ class Elvisito(commands.Cog):
         return 0
 
     def _embed(self, message, channel):
-        embed = discord.Embed()
+        embed = discord.Embed(color=self.bot.color)
         if self._is_url(message) and not self._is_vid_link(message):
             embed.set_image(url=message)
         else:
@@ -59,7 +59,7 @@ class Elvisito(commands.Cog):
             message = message.replace('-elvis', '')
         elif '-Elvis' in message:
             message = message.replace('-Elvis', '')
-        return message.strip('"')
+        return message.strip("\"").strip('”')
 
     def _is_url(self, string_url):
         import re
