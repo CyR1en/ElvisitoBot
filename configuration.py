@@ -67,6 +67,11 @@ class ConfigNode(Enum):
     """
     TOKEN = ("bot_token", "replace this with your bot's token")
     PREFIX = ("command_prefix", "$")
+    R_C_ID = ("reddit_client_id", "Replace with client ID")
+    R_C_SECRET = ("reddit_client_secret", "Replace with client secret")
+    R_UNAME = ("reddit_user", "enter username")
+    R_PASS = ("reddit_pass", "enter pass")
+    BLACKLIST = ("blacklist", "[]")
 
     def get_key(self):
         return self.value[0]

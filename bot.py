@@ -6,6 +6,7 @@ from discord.ext import commands
 
 from cog.admin import Admin
 from cog.elvisito import Elvisito
+from cog.fun import Reddit
 from cog.misc import Misc
 from cog.poll import Poll
 from configuration import ConfigNode
@@ -24,6 +25,7 @@ class Bot(commands.AutoShardedBot):
         self.add_cog(Admin(self))
         self.add_cog(Elvisito(self))
         self.add_cog(Misc(self))
+        self.add_cog(Reddit(self))
 
     async def on_ready(self):
         game = "{}poll".format(self.config_file.get(ConfigNode.PREFIX))

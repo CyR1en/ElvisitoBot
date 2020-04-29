@@ -59,7 +59,7 @@ class Elvisito(commands.Cog):
             message = message.replace('-elvis', '')
         elif '-Elvis' in message:
             message = message.replace('-Elvis', '')
-        return message.strip("\"").strip('”')
+        return message.replace('\"', '')
 
     def _is_url(self, string_url):
         import re
