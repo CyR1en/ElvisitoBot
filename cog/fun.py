@@ -21,6 +21,7 @@
 #  SOFTWARE.
 import random
 
+import discord
 import prawcore
 from discord import NotFound
 from discord.ext import commands
@@ -54,11 +55,37 @@ class Reddit(commands.Cog):
             sub = self.r.subreddit(sub)
             posts = [post for post in sub.hot(limit=200)]
             del posts[0]
-            random_post = random.choice(posts)
-            await ctx.send(random_post.url)
-        except CommandInvokeError:
-            await ctx.send('`{} is not a subreddit`'.format(sub))
+            await ctx.send(embed=await self.get_content(posts, sub))
         except prawcore.exceptions.NotFound:
-            await ctx.send('`404: Cannot find /r/{}`'.format(sub))
+            e = discord.Embed(description="Yo, `r/{}` doesn't exist bro...".format(sub))
+            await ctx.send(embed=e)
         except NotFound:
-            await ctx.send('`404: Cannot find /r/{}`'.format(sub))
+            e = discord.Embed(description="Yo, `r/{}` doesn't exist bro...".format(sub))
+            await ctx.send(embed=e)
+        except prawcore.exceptions.Redirect:
+            e = discord.Embed(description="Yo, `r/{}` doesn't exist bro...".format(sub))
+            await ctx.send(embed=e)
+
+    async def get_content(self, posts, sub):
+        try:
+            random_post = random.choice(posts)
+            if not self._validate(random_post.url):
+                return await self.get_content(posts, sub)
+            else:
+                embed = discord.Embed(title='r/{}'.format(sub), description='{}'.format(random_post.title))
+                embed.set_image(url=random_post.url)
+                return embed
+        except RecursionError:
+            return discord.Embed(description="Dang, there's no great content in this sub!")
+        except IndexError:
+            return discord.Embed(description="Wtf, this sub doesn't have a lot of posts...")
+
+    @staticmethod
+    def _validate(link):
+        if not link.startswith('https:'):
+            return False
+        ext = ['.jpg', '.png', '.gif', ]
+        for e in ext:
+            if link.endswith(e):
+                return True
+        return False
