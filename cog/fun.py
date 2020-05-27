@@ -50,13 +50,16 @@ class Reddit(commands.Cog):
 
     @commands.command()
     async def reddit(self, ctx, sub):
+        u_name = ctx.author.name
         if sub in self.banned_servers:
-            e = discord.Embed(description="Broo, are you serious? That's got some f'ed up content...".format(sub))
+            print(ctx.__dict__)
+            e = discord.Embed(
+                description="Yo {}, are you serious bro? That's got some f'ed up content...".format(u_name))
             await ctx.send(embed=e)
             return 0
         try:
             posts = await self._get_posts(sub)
-            await ctx.send(embed=await self._get_content(posts, sub))
+            await ctx.send(embed=await self._get_content(u_name, posts, sub))
         except prawcore.exceptions.NotFound:
             e = discord.Embed(description="Yo bro, `r/{}` doesn't exist bro...".format(sub))
             await ctx.send(embed=e)
@@ -83,15 +86,17 @@ class Reddit(commands.Cog):
             posts = self.cache.get(sub)
         return posts
 
-    async def _get_content(self, posts, sub):
+    async def _get_content(self, u_name, posts, sub):
         try:
             random_post = random.choice(posts)
             if not self._validate(random_post.url):
                 self.cache.get(sub).remove(random_post)
-                return await self._get_content(posts, sub)
+                return await self._get_content(u_name, posts, sub)
             else:
-                embed = discord.Embed(title="Here you go bro, it's from r/{}".format(sub), description='{}'.format(random_post.title))
+                embed = discord.Embed(title="Here you go bro, it's from r/{}".format(sub),
+                                      description='{}'.format(random_post.title))
                 embed.set_image(url=random_post.url)
+                embed.set_footer(text="{}, Enjoy this bro".format(u_name))
                 return embed
         except RecursionError:
             return discord.Embed(description="Broo, there's no great content in this sub!")
