@@ -1,8 +1,10 @@
 import logging
+import random
 
 import discord
 from discord import Colour
 from discord.ext import commands
+from discord.ext.commands import CommandNotFound
 
 from cog.admin import Admin
 from cog.elvisito import Elvisito
@@ -12,6 +14,9 @@ from cog.poll import Poll
 from configuration import ConfigNode
 
 logger = logging.getLogger(__name__)
+
+phrases = ["Bro, wtf is `{}`", "Are you serious bro? I don't fuckin know bro...", "Shiz, what is `{}` bro",
+           "Oh bro, idk what that is"]
 
 
 class Bot(commands.AutoShardedBot):
@@ -34,3 +39,12 @@ class Bot(commands.AutoShardedBot):
 
     def start_bot(self):
         self.run(self.config_file.get(ConfigNode.TOKEN))
+
+    async def on_command_error(self, context, exception):
+        if isinstance(exception, CommandNotFound):
+            phrase = str(random.choice(phrases))
+            i_cmd = (str(context.message.content)).replace(self.command_prefix, "")
+            reply = phrase.format(i_cmd) if '{}' in phrase else phrase
+            await context.channel.send(reply)
+            return
+        raise exception

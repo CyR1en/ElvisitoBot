@@ -38,6 +38,8 @@ USER_AGENT = '{}:com.cyr1en.somebot:v0.1.0 (by /u/{})'
 class Reddit(commands.Cog):
     def __init__(self, bot):
         self.bot = bot
+        self.cache = dict()
+        self.banned_servers = bot.config_file.get_list_node(ConfigNode.BLACKLIST)
         u_name = bot.config_file.get(ConfigNode.R_UNAME)
         u_pass = bot.config_file.get(ConfigNode.R_PASS)
         self.r = praw.Reddit(client_id=bot.config_file.get(ConfigNode.R_C_ID),
@@ -48,37 +50,53 @@ class Reddit(commands.Cog):
 
     @commands.command()
     async def reddit(self, ctx, sub):
-        if sub in self.bot.config_file.get_list_node(ConfigNode.BLACKLIST):
-            await ctx.send('That subreddit is banned from this server')
+        if sub in self.banned_servers:
+            e = discord.Embed(description="Broo, are you serious? That's got some f'ed up content...".format(sub))
+            await ctx.send(embed=e)
             return 0
         try:
-            sub = self.r.subreddit(sub)
-            posts = [post for post in sub.hot(limit=200)]
-            del posts[0]
-            await ctx.send(embed=await self.get_content(posts, sub))
+            posts = await self._get_posts(sub)
+            await ctx.send(embed=await self._get_content(posts, sub))
         except prawcore.exceptions.NotFound:
-            e = discord.Embed(description="Yo, `r/{}` doesn't exist bro...".format(sub))
+            e = discord.Embed(description="Yo bro, `r/{}` doesn't exist bro...".format(sub))
             await ctx.send(embed=e)
         except NotFound:
-            e = discord.Embed(description="Yo, `r/{}` doesn't exist bro...".format(sub))
+            e = discord.Embed(description="Dang bro, `r/{}` doesn't exist bro...".format(sub))
             await ctx.send(embed=e)
         except prawcore.exceptions.Redirect:
             e = discord.Embed(description="Yo, `r/{}` doesn't exist bro...".format(sub))
             await ctx.send(embed=e)
 
-    async def get_content(self, posts, sub):
+    @commands.command()
+    async def clearcache(self, ctx):
+        self.cache = dict()
+        print(self.cache)
+        await ctx.send(embed=discord.Embed(description='Cleared cache!'))
+
+    async def _get_posts(self, sub):
+        posts = None
+        if sub not in self.cache:
+            sub = self.r.subreddit(sub)
+            posts = [post for post in sub.hot(limit=200)]
+            self.cache[sub] = posts
+        else:
+            posts = self.cache.get(sub)
+        return posts
+
+    async def _get_content(self, posts, sub):
         try:
             random_post = random.choice(posts)
             if not self._validate(random_post.url):
-                return await self.get_content(posts, sub)
+                self.cache.get(sub).remove(random_post)
+                return await self._get_content(posts, sub)
             else:
-                embed = discord.Embed(title='r/{}'.format(sub), description='{}'.format(random_post.title))
+                embed = discord.Embed(title="Here you go bro, it's from r/{}".format(sub), description='{}'.format(random_post.title))
                 embed.set_image(url=random_post.url)
                 return embed
         except RecursionError:
-            return discord.Embed(description="Dang, there's no great content in this sub!")
+            return discord.Embed(description="Broo, there's no great content in this sub!")
         except IndexError:
-            return discord.Embed(description="Wtf, this sub doesn't have a lot of posts...")
+            return discord.Embed(description="Wtf bro, this sub doesn't have a lot of posts...")
 
     @staticmethod
     def _validate(link):
