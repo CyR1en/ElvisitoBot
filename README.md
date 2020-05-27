@@ -1,2 +1,2 @@
-# SomePollBot
-A simple polling bot for discord
+# ElvistoBot
+It's an Elvis bot, that's it
