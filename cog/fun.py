@@ -60,31 +60,43 @@ class Reddit(commands.Cog):
         try:
             posts = await self._get_posts(sub)
             await ctx.send(embed=await self._get_content(u_name, posts, sub))
+        except prawcore.exceptions.Forbidden:
+            e = discord.Embed(description="Oh shiz, it says it's forbidden bro, I don't fuckin know.".format(sub))
+            await ctx.send(embed=e)
         except prawcore.exceptions.NotFound:
-            e = discord.Embed(description="Yo bro, `r/{}` doesn't exist bro...".format(sub))
+            e = discord.Embed(description="Yo bro, I can't find `r/{}`...".format(sub))
             await ctx.send(embed=e)
         except NotFound:
             e = discord.Embed(description="Dang bro, `r/{}` doesn't exist bro...".format(sub))
             await ctx.send(embed=e)
         except prawcore.exceptions.Redirect:
-            e = discord.Embed(description="Yo, `r/{}` doesn't exist bro...".format(sub))
+            e = discord.Embed(description="Shoes, I got lost looking for `r/{}`...".format(sub))
             await ctx.send(embed=e)
 
     @commands.command()
     async def clearcache(self, ctx):
         self.cache = dict()
         print(self.cache)
-        await ctx.send(embed=discord.Embed(description='Cleared cache!'))
+        await ctx.send(embed=discord.Embed(description="Alright bro, It's all clean now bro"))
 
     async def _get_posts(self, sub):
         posts = None
-        if sub not in self.cache:
+        print(sub)
+        print(self.cache.keys())
+        if not self._sub_cached(sub):
             sub = self.r.subreddit(sub)
             posts = [post for post in sub.hot(limit=200)]
-            self.cache[sub] = posts
+            self.cache[str(sub)] = posts
         else:
             posts = self.cache.get(sub)
         return posts
+
+    def _sub_cached(self, sub):
+        sub1 = str(sub)
+        for s in self.cache.keys():
+            if s.lower() == sub1.lower():
+                return True
+        return False
 
     async def _get_content(self, u_name, posts, sub):
         try:
