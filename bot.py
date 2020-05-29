@@ -15,8 +15,13 @@ from configuration import ConfigNode
 
 logger = logging.getLogger(__name__)
 
-phrases = ["Bro, wtf is `{}`", "Are you serious bro? I don't fuckin know bro...", "Shiz, what is `{}` bro",
-           "Oh bro, idk what that is"]
+phrases = ["Bro, wtf is `{}`",
+           "Are you serious bro? I don't fuckin know bro...",
+           "Shiz, what is `{}` bro",
+           "Oh bro, idk what that is",
+           "Oh shoes, my bad my bad. I don't know what `{}` is bro...",
+           "Wtf is that. You should buy an IronFlask though",
+           "Brooooo..............bro..."]
 
 
 class Bot(commands.AutoShardedBot):
@@ -33,7 +38,7 @@ class Bot(commands.AutoShardedBot):
         self.add_cog(Reddit(self))
 
     async def on_ready(self):
-        game = "{}poll".format(self.config_file.get(ConfigNode.PREFIX))
+        game = "{}help".format(self.config_file.get(ConfigNode.PREFIX))
         await self.change_presence(activity=discord.Activity(type=discord.ActivityType.listening, name=game))
         logger.info('Successfully logged in as {}'.format(self.user))
 
