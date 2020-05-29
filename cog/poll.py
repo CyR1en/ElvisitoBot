@@ -12,9 +12,6 @@ from cog.misc import Misc
 from configuration import ConfigNode
 from utility import DictAccess
 
-F20 = 0x171971A1080
-D_EPOCH = 0x14AA2CAB000
-
 ri_emoji = [
     PartialEmoji(animated=False, name='🇦', id=None),
     PartialEmoji(animated=False, name='🇧', id=None),
@@ -191,20 +188,6 @@ class Poll(commands.Cog):
             await message.add_reaction(
                 emoji=ri_emoji[i])
             await asyncio.sleep(0.25)
-
-    @staticmethod
-    def shorten_snowflake(snowflake):
-        elapsed = (snowflake >> 0x16) + D_EPOCH
-        dT = elapsed - F20
-        return (dT << 5) | (snowflake & 0xFFF)
-
-    @staticmethod
-    def expand_shortflake(snowflake):
-        diff = F20 - D_EPOCH
-        print(diff)
-        full = ((snowflake >> 5) + diff) << 0x16
-        print(full)
-        return ((snowflake >> 5) + diff) << 0x16
 
 
 if __name__ == "__main__":
