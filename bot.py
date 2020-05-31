@@ -47,8 +47,11 @@ class Bot(commands.AutoShardedBot):
 
     async def on_command_error(self, context, exception):
         if isinstance(exception, CommandNotFound):
+            content = str(context.message.content)
+            if content.startswith('elvis '):
+                return
             phrase = str(random.choice(phrases))
-            i_cmd = (str(context.message.content)).replace(self.command_prefix, "")
+            i_cmd = content.replace(self.command_prefix, "")
             reply = phrase.format(i_cmd) if '{}' in phrase else phrase
             await context.channel.send(reply)
             return
