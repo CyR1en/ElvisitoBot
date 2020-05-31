@@ -190,14 +190,6 @@ class Poll(commands.Cog):
             await asyncio.sleep(0.25)
 
 
-if __name__ == "__main__":
-    flake = 703149926741442692
-    short_flake = Poll.shorten_snowflake(flake)
-    print(short_flake)
-    print(flake)
-    print(Poll.expand_shortflake(short_flake))
-
-
 class PollModel(DictAccess):
     def __init__(self, command_id, args, is_mv=False):
         self.meta = {'command_id': command_id, 'title': args[0], 'options': args[1:len(args)], 'is_mv': is_mv}
