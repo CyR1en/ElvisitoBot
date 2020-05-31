@@ -119,7 +119,7 @@ class Reddit(commands.Cog):
     def _validate(link):
         if not link.startswith('https:'):
             return False
-        ext = ['.jpg', '.png', '.gif', ]
+        ext = ['.jpg', '.png', '.gif', '.gifv', '.jpeg']
         for e in ext:
             if link.endswith(e):
                 return True
