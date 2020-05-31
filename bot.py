@@ -26,7 +26,7 @@ phrases = ["Bro, wtf is `{}`",
 
 class Bot(commands.AutoShardedBot):
     def __init__(self, config_file, color=Colour.from_rgb(15, 185, 177), **options):
-        super().__init__(config_file.get(ConfigNode.PREFIX), **options)
+        super().__init__(config_file.get_tuple_node(ConfigNode.PREFIX), **options)
         self.color = color
         self.config_file = config_file
         self.token = None
@@ -38,7 +38,7 @@ class Bot(commands.AutoShardedBot):
         self.add_cog(Reddit(self))
 
     async def on_ready(self):
-        game = "{}help".format(self.config_file.get(ConfigNode.PREFIX))
+        game = "{}help".format(self.config_file.get_tuple_node(ConfigNode.PREFIX)[0])
         await self.change_presence(activity=discord.Activity(type=discord.ActivityType.listening, name=game))
         logger.info('Successfully logged in as {}'.format(self.user))
 

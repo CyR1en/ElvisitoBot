@@ -37,24 +37,25 @@ class Misc(commands.Cog):
 
     @staticmethod
     def build_help_embed(self):
+        prefix = format(self.config.get_tuple_node(ConfigNode.PREFIX)[0])
         embed = discord.Embed(title="Alright bro, this is how you use this bot bro", color=self.color)
         sample = """
                   {}poll **make** "Poll title" "option 1" "option 2" ...
-                  """.format(self.config.get(ConfigNode.PREFIX))
+                  """.format(prefix)
         toggle_mv = """
                   {}poll **toggle-mv** <poll-id>
-                  """.format(self.config.get(ConfigNode.PREFIX))
+                  """.format(prefix)
         edit_sample = """
                   To edit a poll, just right click the original command message and edit it bro.
                   """
         reddit = """
                 {}reddit <subreddit>
-                """.format(self.config.get(ConfigNode.PREFIX))
+                """.format(prefix)
         embed.add_field(name="To make a poll", value=sample, inline=False)
         embed.add_field(name="To toggle multiple votes", value=toggle_mv, inline=False)
         embed.add_field(name="To edit a poll", value=edit_sample, inline=False)
         embed.add_field(name="To get some Reddit content", value=reddit, inline=False)
-        embed.add_field(name="For an Elvisito moment", value="{}elvisito".format(self.config.get(ConfigNode.PREFIX)))
+        embed.add_field(name="For an Elvisito moment", value="{}elvisito".format(prefix))
 
         embed.set_footer(text="Oh for polls, be sure to put quotation marks per option.")
         return embed

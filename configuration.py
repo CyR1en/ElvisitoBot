@@ -66,7 +66,7 @@ class ConfigNode(Enum):
     and index[2] is the default value of the key when the fil is generated.
     """
     TOKEN = ("bot_token", "replace this with your bot's token")
-    PREFIX = ("command_prefix", "$")
+    PREFIX = ("command_prefix", "('elvis', 'elvis, ')")
     R_C_ID = ("reddit_client_id", "Replace with client ID")
     R_C_SECRET = ("reddit_client_secret", "Replace with client secret")
     R_UNAME = ("reddit_user", "enter username")
@@ -131,9 +131,30 @@ class ConfigFile(File, ABC):
         :return: Returns a list if the value of a node looks like a list,
         return empty list otherwise.
         """
+        return self._collection_literal_eval(node, '\\[.*?\\]', [])
+
+    def get_tuple_node(self, node):
+        """
+        Get a node with a tuple value.
+
+        :param node: ConfigNode with a tuple value.
+        :return: Returns a tuple if the value of a node looks like a tuple,
+        return empty list otherwise.
+        """
+        return self._collection_literal_eval(node, '\\(.*?\\)', ())
+
+    def _collection_literal_eval(self, node, regex, fallback):
+        """
+        Evaluates the value of a node with given arguments
+
+        :param node: The node path.
+        :param regex: The regex pattern for the value.
+        :param fallback: Default return value if there's no match with regex.
+        :return: Returns the evaluated value.
+        """
         val = self.nodes[node.get_key()]
-        if not re.match('\\[.*?\\]', val):
-            return []
+        if not re.match(regex, val):
+            return fallback
         return ast.literal_eval(val)
 
     def set(self, node, value):
