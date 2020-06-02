@@ -24,6 +24,8 @@ import random
 import discord
 from discord.ext import commands
 
+from utility import URL
+
 
 class Elvisito(commands.Cog):
     def __init__(self, bot):
@@ -39,7 +41,7 @@ class Elvisito(commands.Cog):
 
     def _embed(self, message, channel):
         embed = discord.Embed(color=self.bot.color)
-        if self._is_url(message) and not self._is_vid_link(message):
+        if URL.is_url(message) and not self._is_vid_link(message):
             embed.set_image(url=message)
         else:
             message = self._clean_message(message)
@@ -60,17 +62,6 @@ class Elvisito(commands.Cog):
         elif '-Elvis' in message:
             message = message.replace('-Elvis', '')
         return message.replace('\"', '')
-
-    def _is_url(self, string_url):
-        import re
-        regex = re.compile(
-            r'^(?:http|ftp)s?://'  # http:// or https://
-            r'(?:(?:[A-Z0-9](?:[A-Z0-9-]{0,61}[A-Z0-9])?\.)+(?:[A-Z]{2,6}\.?|[A-Z0-9-]{2,}\.?)|'  # domain...
-            r'localhost|'  # localhost...
-            r'\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3})'  # ...or ip
-            r'(?::\d+)?'  # optional port
-            r'(?:/?|[/?]\S+)$', re.IGNORECASE)
-        return re.match(regex, string_url) is not None
 
     async def get_moment(self, messages):
         msg = random.choice(messages)

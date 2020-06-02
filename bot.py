@@ -11,7 +11,9 @@ from cog.elvisito import Elvisito
 from cog.fun import Reddit
 from cog.misc import Misc
 from cog.poll import Poll
+from cog.voice import Music
 from configuration import ConfigNode
+from exceptions import PathDoesNotExist
 
 logger = logging.getLogger(__name__)
 
@@ -36,6 +38,7 @@ class Bot(commands.AutoShardedBot):
         self.add_cog(Elvisito(self))
         self.add_cog(Misc(self))
         self.add_cog(Reddit(self))
+        self.add_cog(Music(self))
 
     async def on_ready(self):
         game = "{}help".format(self.config_file.get_tuple_node(ConfigNode.PREFIX)[0])
@@ -51,8 +54,23 @@ class Bot(commands.AutoShardedBot):
             if content.startswith('elvis '):
                 return
             phrase = str(random.choice(phrases))
-            i_cmd = content.replace(self.command_prefix, "")
+            i_cmd = self.remove_prefix(content)
             reply = phrase.format(i_cmd) if '{}' in phrase else phrase
             await context.channel.send(reply)
             return
+        if isinstance(exception, PathDoesNotExist):
+            content = str(exception)
+            query = content[content.rindex("\\") + 1:content.index('.mp3')].strip()
+            phrase = str(random.choice(phrases))
+            reply = phrase.format(query) if '{}' in phrase else phrase
+            await context.channel.send(reply)
+            return
         raise exception
+
+    def remove_prefix(self, content: str):
+        prefixes = self.config_file.get_tuple_node(ConfigNode.PREFIX)
+        print(prefixes)
+        for p in prefixes:
+            if p in content:
+                return content.replace(p, "")
+        return content
