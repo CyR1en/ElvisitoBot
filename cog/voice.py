@@ -1,5 +1,6 @@
 import asyncio
 import os
+from collections import deque
 from os import listdir
 from os.path import isfile, join
 
@@ -48,39 +49,57 @@ class YTDLSource(discord.PCMVolumeTransformer):
 
     @classmethod
     async def from_url(cls, url, *, loop=None, stream=False):
-        loop = loop or asyncio.get_event_loop()
-        data = await loop.run_in_executor(None, lambda: ytdl.extract_info(url, download=not stream))
-
-        if 'entries' in data:
-            # take first item from a playlist
-            data = data['entries'][0]
-
-        filename = data['url'] if stream else ytdl.prepare_filename(data)
-        print(filename)
-        return cls(discord.FFmpegPCMAudio(filename, **ffmpeg_options), data=data)
+        return await cls.get_data(url, loop=cls.get_loop(loop), stream=stream)
 
     @classmethod
     async def from_query(cls, query, *, loop=None, stream=False):
         link = await cls.search_url(query)
-        loop = loop or asyncio.get_event_loop()
-        data = await loop.run_in_executor(None, lambda: ytdl.extract_info(link, download=not stream))
+        return await cls.get_data(link, loop=cls.get_loop(loop), stream=stream)
+
+    @classmethod
+    def get_loop(cls, loop=None):
+        return loop or asyncio.get_event_loop()
+
+    @classmethod
+    async def get_data(cls, url, *, loop=None, stream=False):
+        data = await loop.run_in_executor(None, lambda: ytdl.extract_info(url, download=not stream))
         if 'entries' in data:
             # take first item from a playlist
             data = data['entries'][0]
-
         filename = data['url'] if stream else ytdl.prepare_filename(data)
         return cls(discord.FFmpegPCMAudio(filename, **ffmpeg_options), data=data)
 
     @classmethod
     async def search_url(cls, query):
         results = YoutubeSearch(query, max_results=1).to_dict()
+        print(results)
         return "https://www.youtube.com{}".format(results[0].get('link'))
+
+
+class Queue:
+    def __init__(self):
+        self.stack = []
+
+    def queue(self, item):
+        self.stack.append(item)
+
+    def next(self):
+        if len(self.stack) > 0:
+            return self.stack.pop(0)
+        return None
+
+    def peek(self):
+        return self.stack[len(self.stack) - 1]
+
+    def queued(self):
+        return len(self.stack)
 
 
 class Music(commands.Cog):
     def __init__(self, bot):
         self.audio_dir = os.path.join(os.getcwd(), 'audio')
         self.curr_audio_dir = os.path.join(self.audio_dir, 'elvis')
+        self._queue = Queue()
         self.bot = bot
 
     @commands.command()
@@ -103,9 +122,13 @@ class Music(commands.Cog):
 
     @commands.command()
     async def say(self, ctx, *, query):
-        path = os.path.join(self.curr_audio_dir, "{}.mp3".format(query))
-        source = discord.PCMVolumeTransformer(discord.FFmpegPCMAudio(path))
-        ctx.voice_client.play(source, after=lambda e: self._disconnect(ctx, e))
+        voices = str(query).strip().split(" ")
+        for v in voices:
+            path = os.path.join(self.curr_audio_dir, "{}.mp3".format(v))
+            source = discord.PCMVolumeTransformer(discord.FFmpegPCMAudio(path))
+            self._queue.queue(source)
+        if not ctx.voice_client.is_playing():
+            await self._play(ctx)
         await ctx.send('Alright bro')
 
     @commands.command()
@@ -117,31 +140,57 @@ class Music(commands.Cog):
         msg = "Alright bro, here's what you could ask me to say. `{}`".format(s)
         await ctx.send(msg)
 
-    def _disconnect(self, ctx, error):
-        """
-        coro = ctx.voice_client.disconnect()
+    @commands.command()
+    async def play(self, ctx, *, arg):
+        async with ctx.typing():
+            await self.queue(ctx, arg=arg)
+
+    async def _play(self, ctx):
+        source = self._queue.next()
+        ctx.voice_client.play(source, after=lambda e: self.after_handle(ctx, error=e))
+
+        if hasattr(source, 'title'):
+            embed = Embed()
+            embed.add_field(name="Alright, here you go bro", value='[{}]({})'.format(source.title, source.url),
+                            inline=False)
+            await ctx.send(embed=embed)
+
+    @commands.command()
+    async def queue(self, ctx, *, arg):
+        async with ctx.typing():
+            if URL.is_url(arg):
+                source = await YTDLSource.from_url(arg, loop=self.bot.loop)
+            else:
+                source = await YTDLSource.from_query(arg, loop=self.bot.loop)
+            self._queue.queue(source)
+            print('queued')
+
+        if self._queue.queued() > 0 and not ctx.voice_client.is_playing():
+            print('first item, ensuring')
+            await self.ensure_voice(ctx)
+            print('now playing')
+            await self._play(ctx)
+        else:
+            last = self._queue.peek()
+            if hasattr(last, 'title'):
+                embed = Embed()
+                embed.add_field(name="Alright bro, I queued ", value='[{}]({})'.format(last.title, last.url),
+                                inline=False)
+                await ctx.send(embed=embed)
+
+    @commands.command()
+    async def next(self, ctx):
+        if ctx.voice_client.is_playing():
+            ctx.voice_client.stop()
+        await self._play(ctx)
+
+    def after_handle(self, ctx, *, error):
+        coro = self._play(ctx)
         fut = asyncio.run_coroutine_threadsafe(coro, self.bot.loop)
         try:
             fut.result()
         except:
             pass
-        """
-
-    @commands.command()
-    async def play(self, ctx, *, arg):
-        async with ctx.typing():
-            player = None
-            if URL.is_url(arg):
-                player = await YTDLSource.from_url(arg, loop=self.bot.loop)
-            else:
-                player = await YTDLSource.from_query(arg, loop=self.bot.loop)
-            print(player.__dict__)
-            ctx.voice_client.play(player, after=lambda e: print('Player error: %s' % e) if e else None)
-
-        embed = Embed()
-        embed.add_field(name="Alright, here you go bro", value='[{}]({})'.format(player.title, player.url),
-                        inline=False)
-        await ctx.send(embed=embed)
 
     @commands.command()
     async def volume(self, ctx, volume: int):
@@ -160,11 +209,12 @@ class Music(commands.Cog):
     async def ensure_data(self, ctx):
         content = ctx.message.content
         query = content[content.index('say') + len('say'):len(content)].strip()
-        path = os.path.join(self.curr_audio_dir, "{}.mp3".format(query))
-        if not os.path.exists(path):
-            raise PathDoesNotExist(str(path))
-        else:
-            await self.ensure_voice(ctx)
+        queries = str(query).strip().split(" ")
+        for q in queries:
+            path = os.path.join(self.curr_audio_dir, "{}.mp3".format(q))
+            if not os.path.exists(path):
+                raise PathDoesNotExist(str(path))
+        await self.ensure_voice(ctx)
 
     @play.before_invoke
     async def ensure_voice(self, ctx):
@@ -174,5 +224,3 @@ class Music(commands.Cog):
             else:
                 await ctx.send("Bro, you're not even on a voice channel")
                 raise NotInChannel("You're not in a voice channel")
-        elif ctx.voice_client.is_playing():
-            ctx.voice_client.stop()
