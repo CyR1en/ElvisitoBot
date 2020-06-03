@@ -22,8 +22,8 @@ phrases = ["Bro, wtf is `{}`",
            "Shiz, what is `{}` bro",
            "Oh bro, idk what that is",
            "Oh shoes, my bad my bad. I don't know what `{}` is bro...",
-           "Wtf is that. You should buy an IronFlask though",
-           "Brooooo..............bro..."]
+           "Wtf is {}. You should buy an IronFlask though",
+           "Brooooo... `{}`? bro..."]
 
 
 class Bot(commands.AutoShardedBot):
