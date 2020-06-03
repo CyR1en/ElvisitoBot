@@ -79,18 +79,38 @@ class YTDLSource(discord.PCMVolumeTransformer):
 
 class Music(commands.Cog):
     def __init__(self, bot):
+        self.audio_dir = os.path.join(os.getcwd(), 'audio')
+        self.curr_audio_dir = os.path.join(self.audio_dir, 'elvis')
         self.bot = bot
 
     @commands.command()
+    async def imitate(self, ctx, directory: str):
+        dirs = [f for f in listdir(self.audio_dir)]
+        if directory not in dirs:
+            await ctx.send("Bro, I don't know how to imitate that person...")
+        else:
+            self.curr_audio_dir = os.path.join(self.audio_dir, directory)
+            msg = "Alright bro, I'm now imitating `{}`.".format(directory)
+            await ctx.send(msg)
+
+    @commands.command()
+    async def imitatelist(self, ctx):
+        dirs = [f for f in listdir(self.audio_dir)]
+        s = ", "
+        s = s.join(dirs)
+        msg = "Alright bro, I could imitate the following people. `{}`".format(s)
+        await ctx.send(msg)
+
+    @commands.command()
     async def say(self, ctx, *, query):
-        path = os.path.join(os.getcwd(), 'audio', "{}.mp3".format(query))
+        path = os.path.join(self.curr_audio_dir, "{}.mp3".format(query))
         source = discord.PCMVolumeTransformer(discord.FFmpegPCMAudio(path))
         ctx.voice_client.play(source, after=lambda e: self._disconnect(ctx, e))
         await ctx.send('Alright bro')
 
     @commands.command()
     async def saylist(self, ctx):
-        path = os.path.join(os.getcwd(), 'audio')
+        path = self.curr_audio_dir
         files = [f for f in listdir(path) if isfile(join(path, f))]
         s = ", "
         s = s.join(files).replace(".mp3", "")
@@ -98,12 +118,14 @@ class Music(commands.Cog):
         await ctx.send(msg)
 
     def _disconnect(self, ctx, error):
+        """
         coro = ctx.voice_client.disconnect()
         fut = asyncio.run_coroutine_threadsafe(coro, self.bot.loop)
         try:
             fut.result()
         except:
             pass
+        """
 
     @commands.command()
     async def play(self, ctx, *, arg):
@@ -138,7 +160,7 @@ class Music(commands.Cog):
     async def ensure_data(self, ctx):
         content = ctx.message.content
         query = content[content.index('say') + len('say'):len(content)].strip()
-        path = os.path.join(os.getcwd(), 'audio', "{}.mp3".format(query))
+        path = os.path.join(self.curr_audio_dir, "{}.mp3".format(query))
         if not os.path.exists(path):
             raise PathDoesNotExist(str(path))
         else:
