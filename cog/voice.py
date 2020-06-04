@@ -71,7 +71,7 @@ class YTDLSource(discord.PCMVolumeTransformer):
 
     @classmethod
     async def search_url(cls, query):
-        results = YoutubeSearch(query, max_results=1).to_dict()
+        results = YoutubeSearch(query, max_results=10).to_dict()
         print(results)
         return "https://www.youtube.com{}".format(results[0].get('link'))
 
@@ -100,6 +100,7 @@ class Music(commands.Cog):
         self.audio_dir = os.path.join(os.getcwd(), 'audio')
         self.curr_audio_dir = os.path.join(self.audio_dir, 'elvis')
         self._queue = Queue()
+        self.now_playing_message = None
         self.bot = bot
 
     @commands.command()
@@ -143,17 +144,19 @@ class Music(commands.Cog):
     @commands.command()
     async def play(self, ctx, *, arg):
         async with ctx.typing():
+            # Just queue the song
             await self.queue(ctx, arg=arg)
 
     async def _play(self, ctx):
+        # get the next song
         source = self._queue.next()
+        # play the next song
         ctx.voice_client.play(source, after=lambda e: self.after_handle(ctx, error=e))
 
+        # respond if possible
         if hasattr(source, 'title'):
-            embed = Embed()
-            embed.add_field(name="Alright, here you go bro", value='[{}]({})'.format(source.title, source.url),
-                            inline=False)
-            await ctx.send(embed=embed)
+            embed = Embed(title="Alright, here you go bro", description='[{}]({})'.format(source.title, source.url))
+            self.now_playing_message = await ctx.send(embed=embed)
 
     @commands.command()
     async def queue(self, ctx, *, arg):
@@ -163,26 +166,27 @@ class Music(commands.Cog):
             else:
                 source = await YTDLSource.from_query(arg, loop=self.bot.loop)
             self._queue.queue(source)
-            print('queued')
 
-        if self._queue.queued() > 0 and not ctx.voice_client.is_playing():
-            print('first item, ensuring')
+        # if it's the first item on the queue, just play right away, queue otherwise.
+        if self._queue.queued() == 1 and not ctx.voice_client.is_playing():
             await self.ensure_voice(ctx)
-            print('now playing')
             await self._play(ctx)
         else:
             last = self._queue.peek()
+            # check if source has a title, for cases when the commands 'say' is invoked
             if hasattr(last, 'title'):
-                embed = Embed()
-                embed.add_field(name="Alright bro, I queued ", value='[{}]({})'.format(last.title, last.url),
-                                inline=False)
+                embed = Embed(description="Alright bro, I queued [{}]({})".format(last.title, last.url))
                 await ctx.send(embed=embed)
 
     @commands.command()
     async def next(self, ctx):
         if ctx.voice_client.is_playing():
+            # stopping automatically invokes after_handle()
             ctx.voice_client.stop()
-        await self._play(ctx)
+
+        # delete the "now playing" message
+        if self.now_playing_message is not None:
+            await self.now_playing_message.delete()
 
     def after_handle(self, ctx, *, error):
         coro = self._play(ctx)
