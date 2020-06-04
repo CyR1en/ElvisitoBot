@@ -217,7 +217,7 @@ class Music(commands.Cog):
         for q in queries:
             path = os.path.join(self.curr_audio_dir, "{}.mp3".format(q))
             if not os.path.exists(path):
-                raise PathDoesNotExist(str(path))
+                raise PathDoesNotExist(q)
         await self.ensure_voice(ctx)
 
     @play.before_invoke

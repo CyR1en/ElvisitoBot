@@ -59,8 +59,7 @@ class Bot(commands.AutoShardedBot):
             await context.channel.send(reply)
             return
         if isinstance(exception, PathDoesNotExist):
-            content = str(exception)
-            query = content[content.rindex("\\") + 1:content.index('.mp3')].strip()
+            query = str(exception)
             phrase = str(random.choice(phrases))
             reply = phrase.format(query) if '{}' in phrase else phrase
             await context.channel.send(reply)
