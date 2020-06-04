@@ -59,7 +59,7 @@ class Bot(commands.AutoShardedBot):
             await context.channel.send(reply)
             return
         if isinstance(exception, PathDoesNotExist):
-            query = str(exception)
+            query = str(exception.original)
             phrase = str(random.choice(phrases))
             reply = phrase.format(query) if '{}' in phrase else phrase
             await context.channel.send(reply)
