@@ -131,14 +131,15 @@ class Music(commands.Cog):
 
     async def _say(self, ctx, query):
         arg = str(query).strip().split(" ")
-        for a in arg:
+        while len(arg) > 0:
+            a = arg.pop(0)
             path = os.path.join(self.curr_audio_dir, "{}.mp3".format(a))
             # if not exist check for sub_dir
             if not os.path.exists(path):
                 sub_dir = a.replace("(", "").replace(")", "")
                 if sub_dir in self.voices:
                     self.curr_audio_dir = os.path.join(self.audio_dir, sub_dir)
-                    await self._say(ctx, query[query.index(a) + len(a):len(query)])
+                    await self._say(ctx, " ".join(arg))
                     # End top level recursive
                     return
                 else:
