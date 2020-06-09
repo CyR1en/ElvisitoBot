@@ -150,8 +150,6 @@ class Music(commands.Cog):
         if not ctx.voice_client.is_playing():
             await self._play(ctx)
 
-
-
     @commands.command()
     async def saylist(self, ctx):
         path = self.curr_audio_dir
@@ -165,7 +163,7 @@ class Music(commands.Cog):
     async def play(self, ctx, *, arg):
         async with ctx.typing():
             # Just queue the song
-            await self.queue(ctx, arg=arg)
+            await self.append_queue(ctx, arg)
 
     async def _play(self, ctx):
         # get the next song
@@ -179,7 +177,12 @@ class Music(commands.Cog):
             self.now_playing_message = await ctx.send(embed=embed)
 
     @commands.command()
-    async def queue(self, ctx, *, arg):
+    async def queue(self,):
+        if self._queue.queued() > 0:
+            for i in self._queue.stack:
+                print(i)
+
+    async def append_queue(self, ctx, arg):
         async with ctx.typing():
             if URL.is_url(arg):
                 source = await YTDLSource.from_url(arg, loop=self.bot.loop)
