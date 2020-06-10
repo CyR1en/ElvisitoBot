@@ -99,6 +99,7 @@ class Music(commands.Cog):
     def __init__(self, bot):
         self.audio_dir = os.path.join(os.getcwd(), 'audio')
         self.curr_audio_dir = os.path.join(self.audio_dir, 'elvis')
+        self.voices = [f for f in listdir(self.audio_dir)]
         self._queue = Queue()
         self.now_playing_message = None
         self.bot = bot
@@ -123,14 +124,33 @@ class Music(commands.Cog):
 
     @commands.command()
     async def say(self, ctx, *, query):
-        voices = str(query).strip().split(" ")
-        for v in voices:
-            path = os.path.join(self.curr_audio_dir, "{}.mp3".format(v))
-            source = discord.PCMVolumeTransformer(discord.FFmpegPCMAudio(path))
-            self._queue.queue(source)
+        temp = self.curr_audio_dir
+        await self._say(ctx, query)
+        await ctx.send('Alright bro')
+        self.curr_audio_dir = temp
+
+    async def _say(self, ctx, query):
+        arg = str(query).strip().split(" ")
+        while len(arg) > 0:
+            a = arg.pop(0)
+            path = os.path.join(self.curr_audio_dir, "{}.mp3".format(a))
+            # if not exist check for sub_dir
+            if not os.path.exists(path):
+                sub_dir = a.replace("(", "").replace(")", "")
+                if sub_dir in self.voices:
+                    self.curr_audio_dir = os.path.join(self.audio_dir, sub_dir)
+                    await self._say(ctx, " ".join(arg))
+                    # End top level recursive
+                    return
+                else:
+                    raise PathDoesNotExist(a)
+            else:
+                source = discord.PCMVolumeTransformer(discord.FFmpegPCMAudio(path))
+                self._queue.queue(source)
         if not ctx.voice_client.is_playing():
             await self._play(ctx)
-        await ctx.send('Alright bro')
+
+
 
     @commands.command()
     async def saylist(self, ctx):
@@ -209,7 +229,6 @@ class Music(commands.Cog):
         await ctx.send("Shiz, alright bro, I'm sorry")
         await ctx.voice_client.disconnect()
 
-    @say.before_invoke
     async def ensure_data(self, ctx):
         content = ctx.message.content
         query = content[content.index('say') + len('say'):len(content)].strip()
@@ -221,6 +240,7 @@ class Music(commands.Cog):
         await self.ensure_voice(ctx)
 
     @play.before_invoke
+    @say.before_invoke
     async def ensure_voice(self, ctx):
         if ctx.voice_client is None:
             if ctx.author.voice:
