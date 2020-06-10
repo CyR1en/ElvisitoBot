@@ -177,10 +177,10 @@ class Music(commands.Cog):
             self.now_playing_message = await ctx.send(embed=embed)
 
     @commands.command()
-    async def queue(self,):
+    async def queue(self,ctx):
         if self._queue.queued() > 0:
             for i in self._queue.stack:
-                print(i)
+                print(i.title)
 
     async def append_queue(self, ctx, arg):
         async with ctx.typing():
