@@ -150,8 +150,6 @@ class Music(commands.Cog):
         if not ctx.voice_client.is_playing():
             await self._play(ctx)
 
-
-
     @commands.command()
     async def saylist(self, ctx):
         path = self.curr_audio_dir
