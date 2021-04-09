@@ -136,10 +136,10 @@ class Poll(commands.Cog):
         ctx.channel.guild.get_member('')
         if ctx.invoked_subcommand is None:
             """Poll commands"""
-            if len(args) is 0:
+            if len(args) == 0:
                 await ctx.send(embed=Misc.build_help_embed(self))
                 return 0
-            if len(args) is 1:
+            if len(args) == 1:
                 await ctx.send(embed=Misc.build_help_embed(self))
                 return 0
             await self._send_message(ctx, args)
