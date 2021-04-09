@@ -27,9 +27,6 @@ from discord import NotFound
 from discord.ext import commands
 import praw
 import os
-
-from discord.ext.commands import CommandInvokeError
-
 from configuration import ConfigNode
 
 USER_AGENT = '{}:com.cyr1en.somebot:v0.1.0 (by /u/{})'
@@ -52,7 +49,6 @@ class Reddit(commands.Cog):
     async def reddit(self, ctx, sub):
         u_name = ctx.author.name
         if sub in self.banned_servers:
-            print(ctx.__dict__)
             e = discord.Embed(
                 description="Yo {}, are you serious bro? That's got some f'ed up content...".format(u_name))
             await ctx.send(embed=e)
@@ -76,16 +72,12 @@ class Reddit(commands.Cog):
     @commands.command()
     async def clearcache(self, ctx):
         self.cache = dict()
-        print(self.cache)
         await ctx.send(embed=discord.Embed(description="Alright bro, It's all clean now bro"))
 
     async def _get_posts(self, sub):
-        posts = None
-        print(sub)
-        print(self.cache.keys())
         if not self._sub_cached(sub):
             sub = self.r.subreddit(sub)
-            posts = [post for post in sub.hot(limit=200)]
+            posts = [post for post in sub.hot(limit=500)]
             self.cache[str(sub)] = posts
         else:
             posts = self.cache.get(sub)
@@ -119,7 +111,8 @@ class Reddit(commands.Cog):
     def _validate(link):
         if not link.startswith('https:'):
             return False
-        ext = ['.jpg', '.png', '.gif', '.gifv', '.jpeg']
+        link.replace('.gifv', '.gif')
+        ext = ['.jpg', '.png', '.gif', '.jpeg']
         for e in ext:
             if link.endswith(e):
                 return True
