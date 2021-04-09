@@ -110,7 +110,7 @@ class ConfigFile(File, ABC):
         f = open(self.path, 'r')
         for line in f:
             key = self.__get_key_from_line(line)
-            if key is not -1 and self.__key_in_nodes(key):
+            if key != -1 and self.__key_in_nodes(key):
                 self.nodes[key] = self.__get_val_from_line(line)
         f.close()
 
@@ -168,10 +168,11 @@ class ConfigFile(File, ABC):
         """
         for line in fileinput.input(self.path, inplace=True):
             key = self.__get_key_from_line(line)
-            if key is not -1 and key == node.get_key():
+            if key != -1 and key == node.get_key():
                 line = "{} = {}\n".format(key, value)
                 self.nodes[key] = value
             sys.stdout.write(line)
+        self.reload()
 
     def reload(self):
         """
