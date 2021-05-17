@@ -67,4 +67,4 @@ class Admin(commands.Cog):
     @commands.command(pass_context=True, hidden=True, name="purge")
     async def purge(self, ctx, number: int):
         channel = ctx.channel
-        await channel.purge(limit=number)
+        await channel.purge(limit=number + 1)
