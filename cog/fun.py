@@ -24,7 +24,7 @@ import random
 import discord
 import prawcore
 from discord import NotFound
-from discord.ext import commands
+from discord.ext import commands, tasks
 import praw
 import os
 from configuration import ConfigNode
@@ -44,6 +44,7 @@ class Reddit(commands.Cog):
                              user_agent=USER_AGENT.format(os.name, u_name),
                              username=u_name,
                              password=u_pass)
+        self._refresh_cache.start()
 
     @commands.command()
     async def reddit(self, ctx, sub):
@@ -75,20 +76,37 @@ class Reddit(commands.Cog):
         await ctx.send(embed=discord.Embed(description="Alright bro, It's all clean now bro"))
 
     async def _get_posts(self, sub):
-        if not self._sub_cached(sub):
-            sub = self.r.subreddit(sub)
-            posts = [post for post in sub.hot(limit=500)]
-            self.cache[str(sub)] = posts
+        if not self._is_sub_cached(sub):
+            posts = await self._cache_sub(sub)
         else:
             posts = self.cache.get(sub)
         return posts
 
-    def _sub_cached(self, sub):
+    async def _cache_sub(self, sub):
+        """
+        Cache subreddit and return the posts on that subreddit.
+        """
+        sub = self.r.subreddit(sub)
+        posts = [post for post in sub.hot(limit=500)]
+        for p in posts:
+            if not self._validate(p.url):
+                posts.remove(p)
+        self.cache[str(sub)] = posts
+        return posts
+
+    def _is_sub_cached(self, sub):
         sub1 = str(sub)
         for s in self.cache.keys():
             if s.lower() == sub1.lower():
                 return True
         return False
+
+    @tasks.loop(hours=24)
+    async def _refresh_cache(self):
+        subs = self.cache.keys()
+        self.cache = dict()
+        for sub in subs:
+            await self._cache_sub(sub)
 
     async def _get_content(self, u_name, posts, sub):
         try:
