@@ -183,10 +183,9 @@ class Poll(commands.Cog):
 
     async def _react(self, message):
         args = self.polls.get(message.id).get_meta('options')
-        message = await message.channel.fetch_message(id=message.id)
+        message = await message.channel.fetch_message(message.id)
         for i in range(len(args)):
-            await message.add_reaction(
-                emoji=ri_emoji[i])
+            await message.add_reaction(ri_emoji[i])
             await asyncio.sleep(0.25)
 
 
