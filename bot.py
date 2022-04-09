@@ -27,23 +27,23 @@ phrases = ["Bro, wtf is `{}`",
 
 
 class Bot(commands.AutoShardedBot):
-    def __init__(self, config_file, color=Colour.from_rgb(15, 185, 177), **options):
-        super().__init__(config_file.get_tuple_node(ConfigNode.PREFIX), **options)
+    def __init__(self, config_file, intents: discord.Intents, color=Colour.from_rgb(15, 185, 177), **options):
+        super().__init__(config_file.get_tuple_node(ConfigNode.PREFIX), intents=intents, **options)
         self.color = color
         self.config_file = config_file
         self.token = None
         self.remove_command('help')
-        self.add_cog(Poll(self))
-        self.add_cog(Admin(self))
-        self.add_cog(Elvisito(self))
-        self.add_cog(Misc(self))
-        self.add_cog(Reddit(self))
-        self.add_cog(Music(self))
 
     async def on_ready(self):
         game = "{}help".format(self.config_file.get_tuple_node(ConfigNode.PREFIX)[0])
         await self.change_presence(activity=discord.Activity(type=discord.ActivityType.listening, name=game))
         logger.info('Successfully logged in as {}'.format(self.user))
+        await self.add_cog(Poll(self))
+        await self.add_cog(Admin(self))
+        await self.add_cog(Elvisito(self))
+        await self.add_cog(Misc(self))
+        await self.add_cog(Reddit(self))
+        await self.add_cog(Music(self))
 
     def start_bot(self):
         self.run(self.config_file.get(ConfigNode.TOKEN))

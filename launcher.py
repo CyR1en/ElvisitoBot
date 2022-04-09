@@ -2,6 +2,8 @@ import contextlib
 import logging
 import sys
 
+import discord
+
 from bot import Bot
 from configuration import ConfigFile, ConfigNode
 
@@ -49,6 +51,8 @@ if __name__ == '__main__':
     with setup_logging():
         config = ConfigFile("config")
         check_token(config)
-        Bot(config).start_bot()
+        intents = discord.Intents.default()
+        intents.message_content = True
+        Bot(config, intents).start_bot()
 
 
