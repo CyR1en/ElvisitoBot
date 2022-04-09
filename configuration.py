@@ -143,6 +143,16 @@ class ConfigFile(File, ABC):
         """
         return self._collection_literal_eval(node, '\\(.*?\\)', ())
 
+    def get_dict_node(self, node):
+        """
+        Get a node with a dict value.
+
+        :param node: ConfigNode with a dict value.
+        :return: Returns a dict if the value of a node looks like a dict,
+        return empty dict otherwise.
+        """
+        return self._collection_literal_eval(node, '\\{.*?\\}', {})
+
     def _collection_literal_eval(self, node, regex, fallback):
         """
         Evaluates the value of a node with given arguments
